@@ -1,123 +1,119 @@
-import csv
-import turtle
 import numpy as np
 import pygame
 import time
 
-
-LSx = []; LSy = []; LSz = []; LTx = []; LTy = []; LTz = []
-RSx = []; RSy = []; RSz = []; RTx = []; RTy = []; RTz = []
-screen_w = 500; screen_h = 500
-x_center = screen_w * 0.5; y_center = screen_h * 0.5
-leg_length = 100;
+# global variables
+LS = []; LT = []; RS = []; RT = []
+SCREEN_W = 600; SCREEN_H = 600
+X_CENTER = SCREEN_W * 0.5; Y_CENTER = SCREEN_H * 0.5
+LEG_LENGTH = 100;
+SAMPLING = 15;
+# one leg high knee 360 - just left leg doing high knees in a circle
+# datarun = r"/Users/rosanacho/Desktop/school/sdp visual/one leg high knee 360/data.run"
+# walk and turn - walks forward a bit and then 180 and walks back
+datarun = r"/Users/rosanacho/Desktop/school/sdp visual/walk and turn/data.run"
+# shoes = "shoe_2.png"
 
 def reading():
-    file = open("data.run", "r")
+    file = open(datarun, "r")
+    file.readline()
     file.readline()
     for line in file:
         temp = line.split(",")
-        LTx.append(float(temp[0]))
-        LTy.append(float(temp[1]))
-        LTz.append(float(temp[2]))
-        LSx.append(float(temp[3]))
-        LSy.append(float(temp[4]))
-        LSz.append(float(temp[5]))
-        RTx.append(float(temp[6]))
-        RTy.append(float(temp[7]))
-        RTz.append(float(temp[8]))
-        RSx.append(float(temp[9]))
-        RSy.append(float(temp[10]))
-        RSz.append(float(temp[11]))
+        LT.append([float(temp[0]), float(temp[1]), float(temp[2])])
+        LS.append([float(temp[3]), float(temp[4]), float(temp[5])])
+        RT.append([float(temp[6]), float(temp[7]), float(temp[8])])
+        RS.append([float(temp[9]), float(temp[10]), float(temp[11])])
     
     file.close()
 
-# def thigh_knee(thigh, iteration):
-#     return (thigh[0] - leg_length * np.sin(LTx[iteration]),
-#             thigh[1] + leg_length * np.cos(LTx[iteration]))
 
-# def shank(knee_pos, iteration):
-#     return (knee_pos[0] - leg_length * np.sin(LSx[iteration]),
-#             knee_pos[1] + leg_length * np.cos(LSx[iteration]))
+def get_knee_pos(iteration: float, leg: str, point: str):
+    
+    if leg == "L":
+        rad_thigh = np.pi / -180 * LT[iteration][0]
+        rad_shank = np.pi / -180 * LS[iteration][0]
+    elif leg == "R":
+        rad_thigh = np.pi / 180 * RT[iteration][0]
+        rad_shank = np.pi / 180 * RS[iteration][0]
+    
+    knee_x = LEG_LENGTH * np.sin(rad_thigh)
+    knee_y = LEG_LENGTH * np.cos(rad_thigh)
+
+    if point == "K":
+        return [X_CENTER + knee_x, Y_CENTER + knee_y]
+    elif point == "S":
+        shank_x = LEG_LENGTH * np.sin(rad_shank)
+        shank_y = LEG_LENGTH * np.cos(rad_shank)
+        return [X_CENTER + knee_x + shank_x, Y_CENTER + knee_y + shank_y]
+    
 
 def main():
     reading()
+
     pygame.init()
     pygame.display.init()
-    window = pygame.display.set_mode((screen_w, screen_h))
+    window = pygame.display.set_mode((SCREEN_W, SCREEN_W))
     pygame.display.set_caption("2D Animation - Lateral Perspective")
-    window.fill((255, 255, 255))
+    window.fill((0, 0, 0))
 
-    # initialize position
-    l_knee_pos = [x_center, y_center]
-    l_thigh_pos = [x_center, y_center]
+    # displaying text
+    font_a = pygame.font.SysFont("Arial", 40)
+    font_b = pygame.font.SysFont("Arial", 24)
 
-    r_knee_pos = [x_center, y_center]
-    r_thigh_pos = [x_center, y_center]
-    
-    # knee_angle = LSx[0] + (180 - LTx[0])
+    # initialize top of thigh position at center of screen
+    l_thigh_pos = [X_CENTER, Y_CENTER]
+    r_thigh_pos = [X_CENTER, Y_CENTER]
 
-    # blue thigh, red shank
-    iteration = 1
+    iteration = 0
     running = True
     while running == True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
-        """
-        VIDEO GOES:
-        LEFT LEG UP -> 
-        RIGHT LEG UP -> 
-        LEFT LEG UP -> 
-        RIGHT LEG UP
-        """
         
-        # left leg
-        l_rad_thigh = np.pi / 180 * LTx[iteration]
-        l_rad_shank = np.pi / 180 * LSx[iteration]
+        # left and right knee pos
+        l_knee_pos = get_knee_pos(iteration, "L", "K")
+        r_knee_pos = get_knee_pos(iteration, "R", "K")
 
-        l_knee_x = leg_length * np.cos(l_rad_thigh)
-        l_knee_y = leg_length * np.sin(l_rad_thigh)
-        l_knee_pos = [x_center + l_knee_x, y_center + l_knee_y]
+        # left and right shank pos
+        l_shank_pos = get_knee_pos(iteration, "L", "S")
+        r_shank_pos = get_knee_pos(iteration, "R", "S")       
 
-        l_shank_x = leg_length * np.cos(l_rad_shank)
-        l_shank_y = leg_length *  np.sin(l_rad_shank)
-        l_shank_pos = [x_center + l_knee_x + l_shank_x, y_center + l_knee_y + l_shank_y]
+        # displaying knee angles of respective legs
+        left = "Left: "; left_text = font_a.render(left, True, (0, 0, 255), (255, 0 , 0))
+        l_angle = str(round(LT[iteration][0] - LS[iteration][0], 2))
+        l_angle_text = font_a.render(l_angle, True, (255, 255, 255), (0, 0 , 0))
 
-        # right leg
-        r_rad_thigh = np.pi / -180 * RTx[iteration]
-        r_rad_shank = np.pi / -180 * RSx[iteration]
+        right = "Right: "; right_text = font_a.render(right, True, (128, 0, 128), (0, 255, 0))
+        r_angle = str(round(RS[iteration][0] - RT[iteration][0], 2))
+        r_angle_text = font_a.render(r_angle, True, (255, 255, 255), (0, 0 , 0))
 
-        r_knee_x = leg_length * np.cos(r_rad_thigh)
-        r_knee_y = leg_length * np.sin(r_rad_thigh)
-        r_knee_pos = [x_center + r_knee_x, y_center + r_knee_y]
-
-        r_shank_x = leg_length * np.cos(r_rad_shank)
-        r_shank_y = leg_length *  np.sin(r_rad_shank)
-        r_shank_pos = [x_center + r_knee_x + r_shank_x, y_center + r_knee_y + r_shank_y]
-
-        # knee_angle = LSx[iteration] - LTx[iteration]
-        # print(iteration, knee_angle)
-        # print(iteration, "knee:", l_knee_pos)
-        # pygame.draw.circle(window, (0, 0, 255), (l_thigh_pos[0], l_thigh_pos[1]), 6)
-        # pygame.draw.circle(window, (0, 0, 255), (l_knee_pos[0], l_knee_pos[1]), 6)
-        #     #   "shank:", round(shank_x, 2), round(shank_y, 2))
+        window.blit(left_text, (50, 100)); window.blit(l_angle_text, (140, 100))
+        window.blit(right_text, (50, 150)); window.blit(r_angle_text, (160, 150))
 
         pygame.draw.line(window, (0, 0, 255), l_thigh_pos, l_knee_pos) # blue = left thigh
         pygame.draw.line(window, (255, 0, 0), l_knee_pos, l_shank_pos) # red = left shank
-
         pygame.draw.line(window, (0, 255, 0), r_thigh_pos, r_knee_pos) # green = right thigh
-        pygame.draw.line(window, (255, 165, 0), r_knee_pos, r_shank_pos) # yellow = right shank
+        pygame.draw.line(window, (128, 0, 128), r_knee_pos, r_shank_pos) # yellow = right shank
 
-        time.sleep(1 / 30)
+        # adding shoes lol
+        # shoe_l = pygame.image.load(shoes); shoe_r = pygame.image.load(shoes)
+        # shoe_l = pygame.transform.scale(shoe_l, (40, 50)); shoe_r = pygame.transform.scale(shoe_r, (40, 50))
+        # window.blit(shoe_l, (l_shank_pos[0]-30, l_shank_pos[1]-20)); window.blit(shoe_r, (r_shank_pos[0]-30, r_shank_pos[1]-20))
+
+        # displaying length of activity
+        activity = "Length of activity: " + str(round(iteration / SAMPLING, 2))
+        activity_length = font_b.render(activity, True, (255, 255, 255), (0, 0, 0))
+        window.blit(activity_length, (50, 50)) 
+
+        time.sleep(1 / SAMPLING)
+        # time.sleep(.2)
         pygame.display.flip()
         iteration += 1
-        window.fill((255, 255, 255))
+        window.fill((0, 0, 0))
 
     pygame.quit()
-    # print("Length of Activity:", len(LTx) / 15)
-
-    # print("Average Cadence:", )
 
     
 if __name__ == "__main__":
